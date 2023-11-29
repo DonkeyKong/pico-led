@@ -43,14 +43,15 @@ Commands are given all in lower case, parameters separated with a single space, 
 
 > Warning: Ensure external power supplies, if any, are connected to VSYS on the pico, not VBUS, before connecting USB. Powering the pico on the VBUS pin and then connecting USB may fry the pico, the PC or both.
 
-### Set number of LEDs per strip
-`count [strip-id] [num-leds]`
+### `count [strip-id] [num-leds]`
+Set number of LEDs per strip
 
 `strip-id` is an integer 0-3
+
 `num-leds` should be set to the number of LEDs in the strip, or 0 for strips that are not connected
 
-### Set LED strip offset
-`offset [strip-id] [offest]`
+### `offset [strip-id] [offest]`
+Set LED strip offset
 
 `strip-id` is an integer 0-3
 
@@ -60,8 +61,8 @@ PicoLED creates a single 1D display buffer of LEDs to cover all strips. Its size
 
 Using offset, strips can be placed serially or in parallel depending on the desired effect.
 
-### Set LED strip color balance
-`color [strip-id] [red-atten] [green-atten] [blue-atten]`
+### `color [strip-id] [red-atten] [green-atten] [blue-atten]`
+Set LED strip color balance
 
 `strip-id` is an integer 0-3
 
@@ -69,83 +70,70 @@ Using offset, strips can be placed serially or in parallel depending on the desi
 
 Default is (1.0, 1.0, 1.0)
 
-### Set LED strip gamma correction
-`gamma [strip-id] [correction-factor]`
+### `gamma [strip-id] [correction-factor]`
+Set LED strip gamma correction
 
 `strip-id` is an integer 0-3
 
 `correction-factor` is a positive float, generally 1.0 - 3.0
 
-### Change current lighting mode
-`scene [mode-id]`
+### `scene [mode-id]`
+Change current lighting mode
 
 `mode-id` must be an integer 0-2
 - 0: Warm white
 - 1: Gamer RGB
 - 2: Halloween
 
-### Change maximum brightness
-`brightness [brightness]`
+### `brightness [brightness]`
+Change maximum brightness
 
 `brightness` is a floating point value between 0.0 and 1.0. Default is 1.0, full brightness.
 
-### Enable/Disable autosave of settings
-`autosave [0 or 1]`
+### `autosave [0 or 1]`
+Enable/Disable autosave of settings
 
 When autosave is on, settings are written to flash every time they change (at most once every 5 seconds). Enabling autosave may shorten the lifespan of the pi pico flash, but allows the light to automatically remember its last mode every time it boots.
 
-### Reset all settings to defaults
-`defaults`
-
+### `defaults`
 Restore all settings to their factory state, with just one LED on strip id 0.
 
-### Save current settings to flash
-`flash`
+### `flash`
+Save current settings to flash
 
-### Set the RGB color of a single LED
-`poke [index] [r] [g] [b]`
+### `poke [index] [r] [g] [b]`
+Set the RGB color of a single LED
 
 `index` is an index in the display buffer and may light multiple physical LEDs depending on configuration
 
 `r`, `g`, `b` are integer values 0 - 255
 
-### Set the RGB color all LEDs
-`fill [r] [g] [b]`
+### `fill [r] [g] [b]`
+Set the RGB color all LEDs
 
 `r`, `g`, `b` are integer values 0 - 255
 
-### Set the RGB color value of LEDs within a range
-`fillr [index-start] [index-end] [r] [g] [b]`
+### `fillr [index-start] [index-end] [r] [g] [b]`
+Set the RGB color value of LEDs within a range
 
 `r`, `g`, `b` are integer values 0 - 255
 
-### Draw a gradient across all of the LEDs
-`grad [r1] [g1] [b1] [r2] [g2] [b2]`
-
+### `grad [r1] [g1] [b1] [r2] [g2] [b2]`
 Draw a gradient from RGB1 to RGB2 across all connected LED strips. Each parameter is an integer, 0-255.
 
-### Print out all 
-`dump`
-
+### `dump`
 Print the RGB value of all LEDs to the serial console
 
-### halt
-`halt`
-
+### `halt`
 Stop updating the LED buffer, pausing animations and allowing the poke and fill commands to work
 
-### resume
-`resume`
-
+### `resume`
 Resume updating the LED buffer, starting automatic animations.
 
-### reboot
-`reboot`
-
+### `reboot`
 Reboot the microcontroller right away
 
-### prog
-`prog`
+### `prog`
 
 Reboot to pi pico bootloader for firmware programming. Flashes all LEDs red 3 times to confirm.
 
