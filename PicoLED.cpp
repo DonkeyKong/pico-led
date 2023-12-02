@@ -30,14 +30,8 @@ Ws2812bOutput chain3 = Ws2812bOutput::create(28);
 std::vector<Ws2812bOutput::BufferMapping> mappings { {&chain0}, {&chain1}, {&chain2}, {&chain3} };
 
 int drawBufSize = 0;
-int currentScene = 0;
 std::vector<std::unique_ptr<Scene>> scenes;
 bool halt = false;
-
-void updateCurrentSceneFromSettings(SettingsManager& settings)
-{
-  currentScene = settings.get(&Settings::scene) % scenes.size();
-}
 
 void updateCalibrationsFromSettings(const SettingsManager& settings)
 {
@@ -202,7 +196,6 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     if (!ss.fail()) 
     {
       settings.set(&Settings::scene, val);
-      updateCurrentSceneFromSettings(settings);
       std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl;
     }
   }
@@ -213,8 +206,17 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     if (!ss.fail())
     {
       settings.set(&Settings::brightness, brightness);
-      updateCurrentSceneFromSettings(settings);
       std::cout << "brightness set: " << settings.get(&Settings::brightness) << std::endl;
+    }
+  }
+  else if (cmd == "param")
+  {
+    float param;
+    ss >> param;
+    if (!ss.fail())
+    {
+      settings.set(&Settings::param, param);
+      std::cout << "param set: " << settings.get(&Settings::param) << std::endl;
     }
   }
   else if (cmd == "autosave")
@@ -230,7 +232,6 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
   else if (cmd == "defaults")
   {
     settings.setDefaults(true, 0);
-    updateCurrentSceneFromSettings(settings);
     updateMappingsFromSettings(settings);
     updateCalibrationsFromSettings(settings);
   }
@@ -386,18 +387,19 @@ int main()
   scenes.push_back(std::make_unique<WarmWhite>());
   scenes.push_back(std::make_unique<Halloween>());
   scenes.push_back(std::make_unique<GamerRGB>());
+  scenes.push_back(std::make_unique<PureColor>());
 
   // Load and start the PIO program
   GPIOButton sceneButton(20);
-  GPIOButton brightnessButton(19);
+  GPIOButton brightnessButton(19, true);
   GPIOButton sceneBrightnessButton(18, true);
+  GPIOButton paramButton(17, true);
   GPIOButton flashButton(16);
  
   BootSelButton bootSelButton;
 
   absolute_time_t nextFrameTime = get_absolute_time();
   
-  updateCurrentSceneFromSettings(settings);
   updateCalibrationsFromSettings(settings);
   updateMappingsFromSettings(settings);
 
@@ -413,15 +415,34 @@ int main()
     sceneButton.update();
     if (sceneButton.buttonUp())
     {
-      currentScene = (currentScene + 1) % scenes.size();
-      settings.set(&Settings::scene, currentScene);
+      settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)scenes.size());
       std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl;
     }
 
+    paramButton.update();
+    if (paramButton.heldActivate())
+    {
+      float param = settings.get(&Settings::param) + (0.2f * TargetFrameTimeSec);
+      if (param > 1.0f ) param = 0.0f;
+      settings.set(&Settings::param, param);
+    }
+    if (paramButton.buttonUp())
+    {
+      float param = settings.get(&Settings::param) + 0.1f;
+      if (param > 1.0f ) param = 0.0f;
+      settings.set(&Settings::param, param);
+    }
+
     brightnessButton.update();
+    if (brightnessButton.heldActivate())
+    {
+      float brightness = settings.get(&Settings::brightness) - (0.2f * TargetFrameTimeSec);
+      if (brightness < 0.0f ) brightness = 1.0f;
+      settings.set(&Settings::brightness, brightness);
+    }
     if (brightnessButton.buttonUp())
     {
-      float brightness = settings.get(&Settings::brightness) - 0.2;
+      float brightness = settings.get(&Settings::brightness) - 0.1;
       if (brightness < 0.0f ) brightness = 1.0f;
       settings.set(&Settings::brightness, brightness);
       std::cout << "brightness set: " << settings.get(&Settings::brightness) << std::endl;
@@ -430,14 +451,13 @@ int main()
     sceneBrightnessButton.update();
     if (sceneBrightnessButton.heldActivate())
     {
-      float brightness = settings.get(&Settings::brightness) - 0.01;
+      float brightness = settings.get(&Settings::brightness) - (0.2f * TargetFrameTimeSec);
       if (brightness < 0 ) brightness = 1.0f;
       settings.set(&Settings::brightness, brightness);
     }
     if (sceneBrightnessButton.buttonUp())
     {
-      currentScene = (currentScene + 1) % scenes.size();
-      settings.set(&Settings::scene, currentScene);
+      settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)scenes.size());
       std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl;
     }
 
@@ -454,15 +474,15 @@ int main()
     }
 
     // If configured to autosave, try to write settings to flash
-    // every frame. It'll only succeed if the flash payload has changed
-    // and even then only once every 15 seconds
+    // every frame. It'll only actually do it if the flash payload
+    // has changed and even then only once every 15 seconds.
     if (settings.get(&Settings::autosave))
     {
       settings.writeToFlash();
     }
 
     // Update and draw
-    if (!halt) scenes[currentScene]->update(drawBuffer, TargetFrameTimeSec);
+    if (!halt) scenes[settings.get(&Settings::scene)]->update(drawBuffer, TargetFrameTimeSec, settings.get(&Settings::param));
     Ws2812bOutput::writeColorsSerial(drawBuffer, mappings, settings.get(&Settings::brightness));
   }
   return 0;

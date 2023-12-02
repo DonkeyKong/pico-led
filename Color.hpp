@@ -132,3 +132,8 @@ struct LabColor
   float deltaE(const LabColor& other) const;
 };
 #pragma pack(pop)
+
+// Get an RGBColor corresponding to a color teperature in kelvin.
+// Works for all float values but returns colors are clamped 
+// between 1000k and 12000k
+RGBColor GetColorFromTemperature(float tempK);

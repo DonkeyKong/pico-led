@@ -13,7 +13,7 @@ class Scene
 {
 public:
   virtual ~Scene() = default;
-  virtual void update(LEDBuffer& buffer, float deltaTime) = 0;
+  virtual void update(LEDBuffer& buffer, float deltaTime, float param) = 0;
 protected:
   Scene() = default;
 };
@@ -21,11 +21,13 @@ protected:
 class WarmWhite : public Scene
 {
 public:
-  virtual void update(LEDBuffer& buffer, float /* deltaTime */) override
+  virtual void update(LEDBuffer& buffer, float /* deltaTime */, float param) override
   {
+    float colorTempK = (param*7000.0f) + 2000.0f;
+    auto color = GetColorFromTemperature(colorTempK);
     for (int i = 0; i < buffer.size(); ++i)
     {
-      buffer[i] = RGBColor{255, 139, 39};
+      buffer[i] = color;
     }
   }
 };
@@ -33,7 +35,7 @@ public:
 class GamerRGB : public Scene
 {
 public:
-  virtual void update(LEDBuffer& buffer, float deltaTime) override
+  virtual void update(LEDBuffer& buffer, float deltaTime, float param) override
   {
     t = fmodf(t + deltaTime, 10.0f);
     float baseHue = t * 36.0f;
@@ -57,7 +59,7 @@ public:
   }
   ~Halloween() = default;
 
-  virtual void update(LEDBuffer& buffer, float deltaTime) override
+  virtual void update(LEDBuffer& buffer, float deltaTime, float param) override
   {
     // Make sure these guys are the right size!
     src_.resize(buffer.size());
@@ -96,4 +98,18 @@ private:
   std::vector<RGBColor> src_;
   std::vector<RGBColor> dst_;
   float fadeTime = 4.0f;
+};
+
+class PureColor : public Scene
+{
+public:
+  virtual void update(LEDBuffer& buffer, float /* deltaTime */, float param) override
+  {
+    float hue = param * 360.0f;
+    auto color = HSVColor{hue, 1.0f, 1.0f}.toRGB();
+    for (int i = 0; i < buffer.size(); ++i)
+    {
+      buffer[i] = color;
+    }
+  }
 };

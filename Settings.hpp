@@ -44,6 +44,7 @@ struct Settings
   float chain1Gamma;
   float chain2Gamma;
   float chain3Gamma;
+  float param;
 };
 
 class SettingsManager
@@ -88,6 +89,7 @@ public:
     failedValidation |= validate(&Settings::chain1Offset, 0, MAX_BUFFER_LENGTH-(int)current.chain1Count, 0);
     failedValidation |= validate(&Settings::chain2Offset, 0, MAX_BUFFER_LENGTH-(int)current.chain2Count, 0);
     failedValidation |= validate(&Settings::chain3Offset, 0, MAX_BUFFER_LENGTH-(int)current.chain3Count, 0);
+    failedValidation |= validate(&Settings::brightness, 0.0f, 1.0f, 0.0f);
 
     if (failedValidation)
     {
@@ -140,6 +142,7 @@ public:
       set(&Settings::chain1Gamma, 1.0f);
       set(&Settings::chain2Gamma, 1.0f);
       set(&Settings::chain3Gamma, 1.0f);
+      set(&Settings::param, 0.0f);
     }
   }
 

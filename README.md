@@ -12,6 +12,7 @@ the board with a simple text-based serial interface over USB.
   - Gamer RGB animation
   - Halloween
 - Brightness control
+- Mode parameter (customize effects)
 - Serial over USB configuration
   - No recompile needed to add/remove LED strips
   - Draw directly to LEDs over serial
@@ -29,11 +30,12 @@ Out | 26 | LED Strip 1
 Out | 27 | LED Strip 2
 Out | 28 | LED Strip 3
 In  | 16 | Write settings to flash
+In  | 17 | Mode parameter (tap = +10%, hold = +20% / sec)
 In  | 18 | Lighting mode (tap), Brightness (hold)
 In  | 19 | Lighting mode
-In  | 20 | Brightness mode
+In  | 20 | Brightness mode (tap = -10%, hold = -20% / sec)
 
-Inputs are assumed to be momentary switches that make a connection to ground when pressed. The lines are internally pulled up to 3.3v.
+Inputs are assumed to be momentary switches that make a connection to ground when pressed. The lines are internally pulled up to 3.3v. You may need extra pullups if noise is a problem.
 
 ## Serial Communication Protocol
 
@@ -80,15 +82,22 @@ Set LED strip gamma correction
 ### `scene [mode-id]`
 Change current lighting mode
 
-`mode-id` must be an integer 0-2
+`mode-id` must be an integer
 - 0: Warm white
 - 1: Gamer RGB
 - 2: Halloween
+- 3: Solid color
 
 ### `brightness [brightness]`
 Change maximum brightness
 
 `brightness` is a floating point value between 0.0 and 1.0. Default is 1.0, full brightness.
+
+### `param [param]`
+Change mode parameter brightness
+
+`param` is a floating point value between 0.0 and 1.0. Default is 0.0. What the mode parameter changes varies by mode
+
 
 ### `autosave [0 or 1]`
 Enable/Disable autosave of settings
