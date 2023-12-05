@@ -71,30 +71,30 @@ void updateMappingsFromSettings(const SettingsManager& settings)
   drawBuffer.resize(drawBufSize);
 }
 
-void rebootIntoProgMode(uint32_t ledCount)
+void rebootIntoProgMode(uint32_t displayBufferSize, std::vector<Ws2812bOutput::BufferMapping>& mappings)
 {
   // Flash thru a rainbow to indicate programming mode
-  LEDBuffer red(ledCount);
-  LEDBuffer black(ledCount);
+  LEDBuffer red(displayBufferSize);
+  LEDBuffer black(displayBufferSize);
   for (int i=0; i < red.size(); ++i)
   {
-    red[i] = {128, 0, 0};
+    red[i] = {255, 0, 0};
   }
 
   // Flash red 3x
-  chain0.writeColors(black);
+  Ws2812bOutput::writeColorsParallel(black, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(200));
-  chain0.writeColors(red);
+  Ws2812bOutput::writeColorsParallel(red, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(100));
-  chain0.writeColors(black);
+  Ws2812bOutput::writeColorsParallel(black, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(200));
-  chain0.writeColors(red);
+  Ws2812bOutput::writeColorsParallel(red, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(100));
-  chain0.writeColors(black);
+  Ws2812bOutput::writeColorsParallel(black, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(200));
-  chain0.writeColors(red);
+  Ws2812bOutput::writeColorsParallel(red, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(100));
-  chain0.writeColors(black);
+  Ws2812bOutput::writeColorsParallel(black, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(100));
 
   // Reboot
@@ -146,7 +146,11 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
         case 3: prop = &Settings::chain3Offset; break;
         default: std::cout << "error bad chain id" << std::endl << std::flush; return;
       }
-      if (val < 0 || val > MAX_BUFFER_LENGTH) std::cout << "error bad offset" << std::endl << std::flush; return;
+      if (val < 0 || val > MAX_BUFFER_LENGTH) 
+      {
+        std::cout << "error bad offset" << std::endl << std::flush; 
+        return;
+      }
       settings.set(prop, val);
       std::cout << "chain " << id << " offset set: " << settings.get(prop) << std::endl << std::flush;
       updateMappingsFromSettings(settings);
@@ -335,7 +339,7 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
   {
     // Reboot into programming mode
     std::cout << "ok" << std::endl << std::flush;
-    rebootIntoProgMode(settings.get(&Settings::chain0Count));
+    rebootIntoProgMode(drawBufSize, mappings);
   }
   else
   {
@@ -476,7 +480,7 @@ int main()
     bootSelButton.update();
     if (bootSelButton.pressed())
     {
-      rebootIntoProgMode(drawBufSize);
+      rebootIntoProgMode(drawBufSize, mappings);
     }
 
     // If configured to autosave, try to write settings to flash
@@ -489,7 +493,7 @@ int main()
 
     // Update and draw
     if (!halt) scenes[settings.get(&Settings::scene)]->update(drawBuffer, TargetFrameTimeSec, settings.get(&Settings::param));
-    Ws2812bOutput::writeColorsSerial(drawBuffer, mappings, settings.get(&Settings::brightness));
+    Ws2812bOutput::writeColorsParallel(drawBuffer, mappings, settings.get(&Settings::brightness));
   }
   return 0;
 }

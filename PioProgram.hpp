@@ -180,6 +180,7 @@ public:
     Ws2812bOutput* output;
     int size;
     int offset;
+    int index;
   };
 
   static Ws2812bOutput create(uint pin)
@@ -212,31 +213,36 @@ public:
     pio_sm_put_blocking(pio_, sm_, data);
   }
 
-  static inline void writeColorsSerial(const LEDBuffer& buffer, const std::vector<BufferMapping>& mappings, float brightness = 1.0f)
+  static inline void writeColorsParallel(const LEDBuffer& buffer, std::vector<BufferMapping>& mappings, float brightness = 1.0f)
   {
-    RGBColor calibrated;
-    uint32_t data;
-    // Send the colors
-    for (int i=0; i < buffer.size(); ++i)
+    for (BufferMapping& m : mappings)
     {
-      // Write color to every output in range
-      for (const BufferMapping& mapping : mappings)
+      m.index = 0;
+    }
+
+    while (true)
+    {
+      for (BufferMapping& m : mappings)
       {
-        if (i >= mapping.offset && i < (mapping.offset + mapping.size))
+        while (m.index < m.size && !pio_sm_is_tx_fifo_full(m.output->pio_, m.output->sm_))
         {
-          // Format the color for I/O
-          calibrated = buffer[i] * mapping.output->colorBalance_ * brightness;
-          calibrated.applyGamma(mapping.output->gamma_);
-          data = calibrated.G << 16 | calibrated.R << 8 | calibrated.B;
-          pio_sm_put_blocking(mapping.output->pio_, mapping.output->sm_, data);
+          int bufferIndex = std::clamp((m.index++) + m.offset, 0, (int)buffer.size()-1);
+          RGBColor calibrated = buffer[bufferIndex] * m.output->colorBalance_ * brightness;
+          calibrated.applyGamma(m.output->gamma_);
+          uint32_t data = calibrated.G << 16 | calibrated.R << 8 | calibrated.B;
+          pio_sm_put(m.output->pio_, m.output->sm_, data);
         }
       }
-    }
-    // Send a reset on all channels when done
-    data = 0xFF << 24;
-    for (const BufferMapping& mapping : mappings)
-    {
-      pio_sm_put_blocking(mapping.output->pio_, mapping.output->sm_, data);
+
+      int doneCount = 0;
+      for (BufferMapping& m : mappings)
+      {
+        if (m.index == m.size) ++doneCount;
+      }
+      if (doneCount == mappings.size())
+      {
+        break;
+      }
     }
   }
 
