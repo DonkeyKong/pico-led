@@ -33,6 +33,11 @@ int drawBufSize = 0;
 std::vector<std::unique_ptr<Scene>> scenes;
 bool halt = false;
 
+inline float roundToInterval(float val, float interval)
+{
+  return std::round(val / interval) * interval;
+}
+
 void updateCalibrationsFromSettings(const SettingsManager& settings)
 {
   chain0.colorBalance(settings.get(&Settings::chain0ColorBalance));
@@ -117,10 +122,10 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
         case 1: prop = &Settings::chain1Count; break;
         case 2: prop = &Settings::chain2Count; break;
         case 3: prop = &Settings::chain3Count; break;
-        default: std::cout << "error bad chain id" << std::endl; return;
+        default: std::cout << "error bad chain id" << std::endl << std::flush; return;
       }
       settings.set(prop, val);
-      std::cout << "chain " << id << " count set: " << settings.get(prop) << std::endl;
+      std::cout << "chain " << id << " count set: " << settings.get(prop) << std::endl << std::flush;
       updateMappingsFromSettings(settings);
     }
   }
@@ -139,11 +144,11 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
         case 1: prop = &Settings::chain1Offset; break;
         case 2: prop = &Settings::chain2Offset; break;
         case 3: prop = &Settings::chain3Offset; break;
-        default: std::cout << "error bad chain id" << std::endl; return;
+        default: std::cout << "error bad chain id" << std::endl << std::flush; return;
       }
-      if (val < 0 || val > MAX_BUFFER_LENGTH) std::cout << "error bad offset" << std::endl; return;
+      if (val < 0 || val > MAX_BUFFER_LENGTH) std::cout << "error bad offset" << std::endl << std::flush; return;
       settings.set(prop, val);
-      std::cout << "chain " << id << " offset set: " << settings.get(prop) << std::endl;
+      std::cout << "chain " << id << " offset set: " << settings.get(prop) << std::endl << std::flush;
       updateMappingsFromSettings(settings);
     }
   }
@@ -161,10 +166,10 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
         case 1: prop = &Settings::chain1ColorBalance; break;
         case 2: prop = &Settings::chain2ColorBalance; break;
         case 3: prop = &Settings::chain3ColorBalance; break;
-        default: std::cout << "error bad chain id" << std::endl; return;
+        default: std::cout << "error bad chain id" << std::endl << std::flush; return;
       }
       settings.set(prop, Vec3f{r,g,b});
-      std::cout << "chain " << id << " color balance set: " << r << ", " << g << ", " << b << std::endl;
+      std::cout << "chain " << id << " color balance set: " << r << ", " << g << ", " << b << std::endl << std::flush;
       updateCalibrationsFromSettings(settings);
     }
   }
@@ -182,10 +187,10 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
         case 1: prop = &Settings::chain1Gamma; break;
         case 2: prop = &Settings::chain2Gamma; break;
         case 3: prop = &Settings::chain3Gamma; break;
-        default: std::cout << "error bad chain id" << std::endl; return;
+        default: std::cout << "error bad chain id" << std::endl << std::flush; return;
       }
       settings.set(prop, gamma);
-      std::cout << "chain " << id << " gamma set: " << gamma << std::endl;
+      std::cout << "chain " << id << " gamma set: " << gamma << std::endl << std::flush;
       updateCalibrationsFromSettings(settings);
     }
   }
@@ -196,7 +201,7 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     if (!ss.fail()) 
     {
       settings.set(&Settings::scene, val);
-      std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl;
+      std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl << std::flush;
     }
   }
   else if (cmd == "brightness")
@@ -206,7 +211,7 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     if (!ss.fail())
     {
       settings.set(&Settings::brightness, brightness);
-      std::cout << "brightness set: " << settings.get(&Settings::brightness) << std::endl;
+      std::cout << "brightness set: " << settings.get(&Settings::brightness) << std::endl << std::flush;
     }
   }
   else if (cmd == "param")
@@ -216,7 +221,7 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     if (!ss.fail())
     {
       settings.set(&Settings::param, param);
-      std::cout << "param set: " << settings.get(&Settings::param) << std::endl;
+      std::cout << "param set: " << settings.get(&Settings::param) << std::endl << std::flush;
     }
   }
   else if (cmd == "autosave")
@@ -226,7 +231,7 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     if (!ss.fail())
     {
       settings.set(&Settings::autosave, val == 0 ? false : true);
-      std::cout << "autosave set: " << (settings.get(&Settings::autosave) ? 1 : 0) << std::endl;
+      std::cout << "autosave set: " << (settings.get(&Settings::autosave) ? 1 : 0) << std::endl << std::flush;
     }
   }
   else if (cmd == "defaults")
@@ -253,7 +258,7 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
       }
       else
       {
-        std::cout << "error invalid index" << std::endl;
+        std::cout << "error invalid index" << std::endl << std::flush;
       }
     }
   }
@@ -279,7 +284,7 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
       }
       else
       {
-        std::cout << "error invalid index" << std::endl;
+        std::cout << "error invalid index" << std::endl << std::flush;
       }
 
     }
@@ -303,14 +308,14 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
   else if (cmd == "dump")
   {
     // Print the whole display buffer to stdout
-    std::cout << "Dumping display buffer..." << std::endl;
+    std::cout << "Dumping display buffer..." << std::endl << std::flush;
     for (int i=0; i < drawBuffer.size(); ++i)
     {
       std::cout << "idx " << i << " (" << (int)drawBuffer[i].R << " , " 
                                        << (int)drawBuffer[i].G << " , " 
-                                       << (int)drawBuffer[i].B << " )" << std::endl;
+                                       << (int)drawBuffer[i].B << " )" << std::endl << std::flush;
     }
-    std::cout << "End of display buffer" << std::endl;
+    std::cout << "End of display buffer" << std::endl << std::flush;
   }
   else if (cmd == "halt")
   {
@@ -323,28 +328,28 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
   else if (cmd == "reboot")
   {
     // Reboot the system immediately
-    std::cout << "ok" << std::endl;
+    std::cout << "ok" << std::endl << std::flush;
     watchdog_reboot(0,0,0);
   }
   else if (cmd == "prog")
   {
     // Reboot into programming mode
-    std::cout << "ok" << std::endl;
+    std::cout << "ok" << std::endl << std::flush;
     rebootIntoProgMode(settings.get(&Settings::chain0Count));
   }
   else
   {
-    std::cout << "unknown command" << std::endl;
+    std::cout << "unknown command" << std::endl << std::flush;
     return;
   }
 
   if (!ss.fail())
   {
-    std::cout << "ok" << std::endl;
+    std::cout << "ok" << std::endl << std::flush;
   }
   else
   {
-    std::cout << "error" << std::endl;
+    std::cout << "error" << std::endl << std::flush;
   }
 }
 
@@ -390,11 +395,11 @@ int main()
   scenes.push_back(std::make_unique<PureColor>());
 
   // Load and start the PIO program
-  GPIOButton sceneButton(20);
-  GPIOButton brightnessButton(19, true);
-  GPIOButton sceneBrightnessButton(18, true);
-  GPIOButton paramButton(17, true);
   GPIOButton flashButton(16);
+  GPIOButton paramButton(17, true);
+  GPIOButton sceneBrightnessButton(18, true);
+  GPIOButton sceneButton(19);
+  GPIOButton brightnessButton(20, true);
  
   BootSelButton bootSelButton;
 
@@ -416,7 +421,7 @@ int main()
     if (sceneButton.buttonUp())
     {
       settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)scenes.size());
-      std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl;
+      std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl << std::flush;
     }
 
     paramButton.update();
@@ -428,9 +433,10 @@ int main()
     }
     if (paramButton.buttonUp())
     {
-      float param = settings.get(&Settings::param) + 0.1f;
+      float param = roundToInterval(settings.get(&Settings::param) + 0.1f, 0.1f);
       if (param > 1.0f ) param = 0.0f;
       settings.set(&Settings::param, param);
+      std::cout << "param set: " << settings.get(&Settings::param) << std::endl << std::flush;
     }
 
     brightnessButton.update();
@@ -442,10 +448,10 @@ int main()
     }
     if (brightnessButton.buttonUp())
     {
-      float brightness = settings.get(&Settings::brightness) - 0.1;
+      float brightness = roundToInterval(settings.get(&Settings::brightness) - 0.1f, 0.1f);
       if (brightness < 0.0f ) brightness = 1.0f;
       settings.set(&Settings::brightness, brightness);
-      std::cout << "brightness set: " << settings.get(&Settings::brightness) << std::endl;
+      std::cout << "brightness set: " << settings.get(&Settings::brightness) << std::endl << std::flush;
     }
 
     sceneBrightnessButton.update();
@@ -458,7 +464,7 @@ int main()
     if (sceneBrightnessButton.buttonUp())
     {
       settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)scenes.size());
-      std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl;
+      std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl << std::flush;
     }
 
     flashButton.update();

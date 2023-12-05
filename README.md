@@ -23,17 +23,17 @@ the board with a simple text-based serial interface over USB.
 
 ## GPIO Mapping 
 
-GPIO Mode | Pin | Description
+GPIO Mode | Pin | Name | Description
 -------|----------|-------------
-Out | 22 | LED Strip 0
-Out | 26 | LED Strip 1
-Out | 27 | LED Strip 2
-Out | 28 | LED Strip 3
-In  | 16 | Write settings to flash
-In  | 17 | Mode parameter (tap = +10%, hold = +20% / sec)
-In  | 18 | Lighting mode (tap), Brightness (hold)
-In  | 19 | Lighting mode
-In  | 20 | Brightness mode (tap = -10%, hold = -20% / sec)
+Out | 22 | LED 0 | Strip 0 Data
+Out | 26 | LED 1 | Strip 1 Data
+Out | 27 | LED 2 | Strip 2 Data
+Out | 28 | LED 3| Strip 3 Data
+In  | 16 | Save | Write settings to flash
+In  | 17 | Control | Adjust mode parameter (tap = +10%, hold = +20% / sec)
+In  | 18 | Combo | Change mode (tap), Adjust brightness (hold)
+In  | 19 | Mode | Change lighting mode
+In  | 20 | Bright | Adjust brightness (tap = -10%, hold = -20% / sec)
 
 Inputs are assumed to be momentary switches that make a connection to ground when pressed. The lines are internally pulled up to 3.3v. You may need extra pullups if noise is a problem.
 
@@ -96,8 +96,7 @@ Change maximum brightness
 ### `param [param]`
 Change mode parameter brightness
 
-`param` is a floating point value between 0.0 and 1.0. Default is 0.0. What the mode parameter changes varies by mode
-
+`param` is a floating point value between 0.0 and 1.0. Default is 0.0. What the mode parameter changes varies by mode. It could change the color temperature of a white light, the color of a solid color light, the speed of an animation, etc.
 
 ### `autosave [0 or 1]`
 Enable/Disable autosave of settings
@@ -147,7 +146,7 @@ Reboot the microcontroller right away
 Reboot to pi pico bootloader for firmware programming. Flashes all LEDs red 3 times to confirm.
 
 ## Build Requirements
-You'll need to clone the [pico-sdk](https://github.com/raspberrypi/pico-sdk) next to this repo on your disk, as build scripts will be looking for `../pico-sdk` for necessary build files.
+You'll need to clone the [pico-sdk](https://github.com/raspberrypi/pico-sdk) next to this repo on your disk, as build scripts will be looking for `../pico-sdk` for necessary build files. While not entirely necessary, you'll probably also want vscode and docker installed, as this project is configured to build easily with no setup if you have these tools.
 
 ## Possible Future Development
 - Support for up to 8 chains (using all the PIO)
