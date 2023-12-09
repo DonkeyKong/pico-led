@@ -11,7 +11,6 @@
 #include <vector>
 #include <iostream>
 
-using LEDBuffer = std::vector<RGBColor>;
 using ConfigFuncPtr = pio_sm_config (*)(PIO pio, uint stateMachine, uint offset, uint pin, float clkdiv);
 
 class PioProgram

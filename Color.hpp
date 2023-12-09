@@ -10,6 +10,8 @@ struct RGBColor;
 struct HSVColor;
 struct LabColor;
 
+using LEDBuffer = std::vector<RGBColor>;
+
 #pragma pack(push, 1)
 
 struct Vec3f

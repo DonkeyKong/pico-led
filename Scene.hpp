@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Color.hpp"
+#include <map>
 #include <cmath>
 #include <cstdlib>
+#include <memory>
 
 static inline float rand_f(float min, float max)
 {
@@ -18,6 +20,20 @@ protected:
   Scene() = default;
 };
 
+using SceneCollection = std::vector<std::unique_ptr<Scene>>;
+SceneCollection Scenes;
+std::vector<std::string> SceneNames;
+template <typename T>
+struct SceneTypeRegistration
+{
+  SceneTypeRegistration<T>(std::string name) 
+  {
+    SceneNames.push_back(name);
+    Scenes.push_back(std::make_unique<T>());
+  }
+};
+#define RegisterScene(T) static SceneTypeRegistration<T> _registration##T(#T)
+
 class WarmWhite : public Scene
 {
 public:
@@ -31,6 +47,7 @@ public:
     }
   }
 };
+RegisterScene(WarmWhite);
 
 class GamerRGB : public Scene
 {
@@ -48,6 +65,7 @@ public:
 private:
   float t = 0.0f;
 };
+RegisterScene(GamerRGB);
 
 class Halloween : public Scene
 {
@@ -99,6 +117,7 @@ private:
   std::vector<RGBColor> dst_;
   float fadeTime = 4.0f;
 };
+RegisterScene(Halloween);
 
 class PureColor : public Scene
 {
@@ -113,3 +132,36 @@ public:
     }
   }
 };
+RegisterScene(PureColor);
+
+class CandyCane : public Scene
+{
+public:
+  virtual void update(LEDBuffer& buffer, float /* deltaTime */, float param) override
+  {
+    int spacing = std::round(param * 20.0f) + 1.0f;
+    spacing += 1;
+    RGBColor colors[2] = {{230, 30, 0}, {86, 86, 86}};
+    for (int i = 0; i < buffer.size(); ++i)
+    {
+      buffer[i] = colors[(i/spacing)%2];
+    }
+  }
+};
+RegisterScene(CandyCane);
+
+class ChristmasStripes : public Scene
+{
+public:
+  virtual void update(LEDBuffer& buffer, float /* deltaTime */, float param) override
+  {
+    int spacing = std::round(param * 20.0f) + 1.0f;
+    spacing += 1;
+    RGBColor colors[2] = {{230, 30, 0}, {0, 230, 30}};
+    for (int i = 0; i < buffer.size(); ++i)
+    {
+      buffer[i] = colors[(i/spacing)%2];
+    }
+  }
+};
+RegisterScene(ChristmasStripes);

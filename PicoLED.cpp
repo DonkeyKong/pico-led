@@ -19,7 +19,6 @@
 constexpr uint64_t TargetFPS = 20;
 constexpr uint64_t TargetFrameTimeUs = 1000000 / TargetFPS;
 constexpr float TargetFrameTimeSec = 1.0f / (float)TargetFPS;
-using SceneCollection = std::vector<std::unique_ptr<Scene>>;
 
 LEDBuffer drawBuffer;
 Ws2812bOutput chain0 = Ws2812bOutput::create(22);
@@ -30,7 +29,6 @@ Ws2812bOutput chain3 = Ws2812bOutput::create(28);
 std::vector<Ws2812bOutput::BufferMapping> mappings { {&chain0}, {&chain1}, {&chain2}, {&chain3} };
 
 int drawBufSize = 0;
-std::vector<std::unique_ptr<Scene>> scenes;
 bool halt = false;
 
 inline float roundToInterval(float val, float interval)
@@ -309,6 +307,63 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
       }
     }
   }
+  else if (cmd == "info" || cmd == "about")
+  {
+    std::cout << "pico-led by Donkey Kong" << std::endl;
+    std::cout << "https://github.com/DonkeyKong/pico-led" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Settings:" << std::endl;
+    std::cout << "    " << "version:    " << settings.get(&Settings::version) << std::endl;
+    std::cout << "    " << "boardId:    " << *((uint64_t*)settings.get(&Settings::boardId).id) << std::endl;
+    std::cout << "    " << "autosave:    " << settings.get(&Settings::autosave) << std::endl;
+    std::cout << "    " << "scene:    " << settings.get(&Settings::scene) << std::endl;
+    std::cout << "    " << "brightness:    " << settings.get(&Settings::brightness) << std::endl;
+    std::cout << "    " << "param:    " << settings.get(&Settings::param) << std::endl;
+
+    std::cout << "    " << "chain0Count:    " << settings.get(&Settings::chain0Count) << std::endl;
+    std::cout << "    " << "chain0Offset:    " << settings.get(&Settings::chain0Offset) << std::endl;
+    std::cout << "    " << "chain0ColorBalance:    " << "( " 
+                      << settings.get(&Settings::chain0ColorBalance).X << " , " 
+                      << settings.get(&Settings::chain0ColorBalance).Y << " , " 
+                      << settings.get(&Settings::chain0ColorBalance).Z << " )" << std::endl;
+    std::cout << "    " << "chain0Gamma:    " << settings.get(&Settings::chain0Gamma) << std::endl;
+
+    std::cout << "    " << "chain1Count:    " << settings.get(&Settings::chain1Count) << std::endl;
+    std::cout << "    " << "chain1Offset:    " << settings.get(&Settings::chain1Offset) << std::endl;
+    std::cout << "    " << "chain1ColorBalance:    " << "( " 
+                      << settings.get(&Settings::chain1ColorBalance).X << " , " 
+                      << settings.get(&Settings::chain1ColorBalance).Y << " , " 
+                      << settings.get(&Settings::chain1ColorBalance).Z << " )" << std::endl;
+    std::cout << "    " << "chain1Gamma:    " << settings.get(&Settings::chain1Gamma) << std::endl;
+
+    std::cout << "    " << "chain2Count:    " << settings.get(&Settings::chain2Count) << std::endl;
+    std::cout << "    " << "chain2Offset:    " << settings.get(&Settings::chain2Offset) << std::endl;
+    std::cout << "    " << "chain2ColorBalance:    " << "( " 
+                      << settings.get(&Settings::chain2ColorBalance).X << " , " 
+                      << settings.get(&Settings::chain2ColorBalance).Y << " , " 
+                      << settings.get(&Settings::chain2ColorBalance).Z << " )" << std::endl;
+    std::cout << "    " << "chain2Gamma:    " << settings.get(&Settings::chain2Gamma) << std::endl;
+
+    std::cout << "    " << "chain3Count:    " << settings.get(&Settings::chain3Count) << std::endl;
+    std::cout << "    " << "chain3Offset:    " << settings.get(&Settings::chain3Offset) << std::endl;
+    std::cout << "    " << "chain3ColorBalance:    " << "( " 
+                      << settings.get(&Settings::chain3ColorBalance).X << " , " 
+                      << settings.get(&Settings::chain3ColorBalance).Y << " , " 
+                      << settings.get(&Settings::chain3ColorBalance).Z << " )" << std::endl;
+    std::cout << "    " << "chain3Gamma:    " << settings.get(&Settings::chain3Gamma) << std::endl;
+    std::cout << std::endl;
+    std::cout << "Runtime Data:" << std::endl;
+    std::cout << "    " << "runtime version:    " << CURRENT_SETTINGS_VERSION << std::endl;
+    std::cout << "    " << "status:    " << (halt ? "halted" : "running") << std::endl;
+    std::cout << "    " << "scene count:    " << Scenes.size() << std::endl;
+    std::cout << "    " << "scene names:";
+    for (auto& name : SceneNames) std::cout << "    " << name;
+    std::cout << std::endl;
+    std::cout << "    " << "draw buffer size:    " << drawBuffer.size() << std::endl;
+    std::cout << "    " << "max draw buffer size:    " << MAX_BUFFER_LENGTH << std::endl;
+    std::cout << "    " << "target fps:    " << TargetFPS << std::endl;
+    std::cout << std::flush;
+  }
   else if (cmd == "dump")
   {
     // Print the whole display buffer to stdout
@@ -391,12 +446,7 @@ int main()
 
   // Init the settings object
   SettingsManager settings;
-
-  // Initialize the vector holding all the LED values
-  scenes.push_back(std::make_unique<WarmWhite>());
-  scenes.push_back(std::make_unique<Halloween>());
-  scenes.push_back(std::make_unique<GamerRGB>());
-  scenes.push_back(std::make_unique<PureColor>());
+  settings.validate(&Settings::scene, 0, (int)Scenes.size()-1, 0);
 
   // Load and start the PIO program
   GPIOButton flashButton(16);
@@ -424,7 +474,7 @@ int main()
     sceneButton.update();
     if (sceneButton.buttonUp())
     {
-      settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)scenes.size());
+      settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)Scenes.size());
       std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl << std::flush;
     }
 
@@ -467,7 +517,7 @@ int main()
     }
     if (sceneBrightnessButton.buttonUp())
     {
-      settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)scenes.size());
+      settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)Scenes.size());
       std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl << std::flush;
     }
 
@@ -492,7 +542,7 @@ int main()
     }
 
     // Update and draw
-    if (!halt) scenes[settings.get(&Settings::scene)]->update(drawBuffer, TargetFrameTimeSec, settings.get(&Settings::param));
+    if (!halt) Scenes[settings.get(&Settings::scene)]->update(drawBuffer, TargetFrameTimeSec, settings.get(&Settings::param));
     Ws2812bOutput::writeColorsParallel(drawBuffer, mappings, settings.get(&Settings::brightness));
   }
   return 0;
