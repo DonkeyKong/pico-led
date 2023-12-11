@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 set(PICO_SDK_PATH "/pico-sdk")
 set(PICO_BOARD "pico")
+#set(PICO_CXX_ENABLE_EXCEPTIONS 1)
+#set(PICO_CXX_ENABLE_RTTI 1)
 
 # Pull in SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -23,6 +25,8 @@ pico_sdk_init()
 add_executable(${PROJECT_NAME}
         PicoLED.cpp
         Color.cpp
+        Settings.cpp
+        deps/baselib/crc64.c
         # Include hpp files to help intellisense
         Button.hpp
         Color.hpp

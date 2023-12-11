@@ -27,8 +27,6 @@ Ws2812bOutput chain2 = Ws2812bOutput::create(27);
 Ws2812bOutput chain3 = Ws2812bOutput::create(28);
 
 std::vector<Ws2812bOutput::BufferMapping> mappings { {&chain0}, {&chain1}, {&chain2}, {&chain3} };
-
-int drawBufSize = 0;
 bool halt = false;
 
 inline float roundToInterval(float val, float interval)
@@ -36,34 +34,35 @@ inline float roundToInterval(float val, float interval)
   return std::round(val / interval) * interval;
 }
 
-void updateCalibrationsFromSettings(const SettingsManager& settings)
+void updateCalibrationsFromSettings(const Settings& settings)
 {
-  chain0.colorBalance(settings.get(&Settings::chain0ColorBalance));
-  chain1.colorBalance(settings.get(&Settings::chain1ColorBalance));
-  chain2.colorBalance(settings.get(&Settings::chain2ColorBalance));
-  chain3.colorBalance(settings.get(&Settings::chain3ColorBalance));
-  chain0.gamma(settings.get(&Settings::chain0Gamma));
-  chain1.gamma(settings.get(&Settings::chain1Gamma));
-  chain2.gamma(settings.get(&Settings::chain2Gamma));
-  chain3.gamma(settings.get(&Settings::chain3Gamma));
+  chain0.colorBalance(settings.chain0ColorBalance);
+  chain1.colorBalance(settings.chain1ColorBalance);
+  chain2.colorBalance(settings.chain2ColorBalance);
+  chain3.colorBalance(settings.chain3ColorBalance);
+  chain0.gamma(settings.chain0Gamma);
+  chain1.gamma(settings.chain1Gamma);
+  chain2.gamma(settings.chain2Gamma);
+  chain3.gamma(settings.chain3Gamma);
 }
 
-void updateMappingsFromSettings(const SettingsManager& settings)
+void updateMappingsFromSettings(const Settings& settings)
 {
   // Refresh the scene mappings
-  mappings[0].size = (int)settings.get(&Settings::chain0Count);
-  mappings[1].size = (int)settings.get(&Settings::chain1Count);
-  mappings[2].size = (int)settings.get(&Settings::chain2Count);
-  mappings[3].size = (int)settings.get(&Settings::chain3Count);
-  mappings[0].offset = (int)settings.get(&Settings::chain0Offset);
-  mappings[1].offset = (int)settings.get(&Settings::chain1Offset);
-  mappings[2].offset = (int)settings.get(&Settings::chain2Offset);
-  mappings[3].offset = (int)settings.get(&Settings::chain3Offset);
+  mappings[0].size = (int)settings.chain0Count;
+  mappings[1].size = (int)settings.chain1Count;
+  mappings[2].size = (int)settings.chain2Count;
+  mappings[3].size = (int)settings.chain3Count;
+  mappings[0].offset = (int)settings.chain0Offset;
+  mappings[1].offset = (int)settings.chain1Offset;
+  mappings[2].offset = (int)settings.chain2Offset;
+  mappings[3].offset = (int)settings.chain3Offset;
 
-  drawBufSize = std::max(drawBufSize, (int)settings.get(&Settings::chain0Count) + settings.get(&Settings::chain0Offset));
-  drawBufSize = std::max(drawBufSize, (int)settings.get(&Settings::chain1Count) + settings.get(&Settings::chain1Offset));
-  drawBufSize = std::max(drawBufSize, (int)settings.get(&Settings::chain2Count) + settings.get(&Settings::chain2Offset));
-  drawBufSize = std::max(drawBufSize, (int)settings.get(&Settings::chain3Count) + settings.get(&Settings::chain3Offset));
+  int drawBufSize = 0;
+  drawBufSize = std::max(drawBufSize, (int)settings.chain0Count + settings.chain0Offset);
+  drawBufSize = std::max(drawBufSize, (int)settings.chain1Count + settings.chain1Offset);
+  drawBufSize = std::max(drawBufSize, (int)settings.chain2Count + settings.chain2Offset);
+  drawBufSize = std::max(drawBufSize, (int)settings.chain3Count + settings.chain3Offset);
   drawBufSize = std::min(drawBufSize, MAX_BUFFER_LENGTH);
 
   drawBuffer.resize(drawBufSize);
@@ -93,14 +92,14 @@ void rebootIntoProgMode(uint32_t displayBufferSize, std::vector<Ws2812bOutput::B
   Ws2812bOutput::writeColorsParallel(red, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(100));
   Ws2812bOutput::writeColorsParallel(black, mappings, 0.5f);
-  sleep_until(make_timeout_time_ms(100));
+  sleep_until(make_timeout_time_ms(200));
 
   // Reboot
   multicore_reset_core1();
   reset_usb_boot(0,0);
 }
 
-void processCommand(std::string cmdAndArgs, SettingsManager& settings)
+void processCommand(std::string cmdAndArgs, Settings& settings)
 {
   std::stringstream ss(cmdAndArgs);
   std::string cmd;
@@ -114,16 +113,21 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     ss >> val;
     if (!ss.fail())
     {
+      if (val < 0 || val > MAX_BUFFER_LENGTH) 
+      {
+        std::cout << "error bad count" << std::endl << std::flush; 
+        return;
+      }
       switch (id)
       {
-        case 0: prop = &Settings::chain0Count; break;
-        case 1: prop = &Settings::chain1Count; break;
-        case 2: prop = &Settings::chain2Count; break;
-        case 3: prop = &Settings::chain3Count; break;
+        case 0: settings.chain0Count = val; break;
+        case 1: settings.chain1Count = val; break;
+        case 2: settings.chain2Count = val; break;
+        case 3: settings.chain3Count = val; break;
         default: std::cout << "error bad chain id" << std::endl << std::flush; return;
       }
-      settings.set(prop, val);
-      std::cout << "chain " << id << " count set: " << settings.get(prop) << std::endl << std::flush;
+
+      std::cout << "chain " << id << " count set: " << val << std::endl << std::flush;
       updateMappingsFromSettings(settings);
     }
   }
@@ -136,21 +140,20 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     ss >> val;
     if (!ss.fail())
     {
-      switch (id)
-      {
-        case 0: prop = &Settings::chain0Offset; break;
-        case 1: prop = &Settings::chain1Offset; break;
-        case 2: prop = &Settings::chain2Offset; break;
-        case 3: prop = &Settings::chain3Offset; break;
-        default: std::cout << "error bad chain id" << std::endl << std::flush; return;
-      }
       if (val < 0 || val > MAX_BUFFER_LENGTH) 
       {
         std::cout << "error bad offset" << std::endl << std::flush; 
         return;
       }
-      settings.set(prop, val);
-      std::cout << "chain " << id << " offset set: " << settings.get(prop) << std::endl << std::flush;
+      switch (id)
+      {
+        case 0: settings.chain0Offset = val; break;
+        case 1: settings.chain1Offset = val; break;
+        case 2: settings.chain2Offset = val; break;
+        case 3: settings.chain3Offset = val; break;
+        default: std::cout << "error bad chain id" << std::endl << std::flush; return;
+      }
+      std::cout << "chain " << id << " offset set: " << val << std::endl << std::flush;
       updateMappingsFromSettings(settings);
     }
   }
@@ -164,13 +167,12 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     {
       switch (id)
       {
-        case 0: prop = &Settings::chain0ColorBalance; break;
-        case 1: prop = &Settings::chain1ColorBalance; break;
-        case 2: prop = &Settings::chain2ColorBalance; break;
-        case 3: prop = &Settings::chain3ColorBalance; break;
+        case 0: settings.chain0ColorBalance = {r, g, b}; break;
+        case 1: settings.chain1ColorBalance = {r, g, b}; break;
+        case 2: settings.chain2ColorBalance = {r, g, b}; break;
+        case 3: settings.chain3ColorBalance = {r, g, b}; break;
         default: std::cout << "error bad chain id" << std::endl << std::flush; return;
       }
-      settings.set(prop, Vec3f{r,g,b});
       std::cout << "chain " << id << " color balance set: " << r << ", " << g << ", " << b << std::endl << std::flush;
       updateCalibrationsFromSettings(settings);
     }
@@ -185,13 +187,12 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     {
       switch (id)
       {
-        case 0: prop = &Settings::chain0Gamma; break;
-        case 1: prop = &Settings::chain1Gamma; break;
-        case 2: prop = &Settings::chain2Gamma; break;
-        case 3: prop = &Settings::chain3Gamma; break;
+        case 0: settings.chain0Gamma = gamma; break;
+        case 1: settings.chain1Gamma = gamma; break;
+        case 2: settings.chain2Gamma = gamma; break;
+        case 3: settings.chain3Gamma = gamma; break;
         default: std::cout << "error bad chain id" << std::endl << std::flush; return;
       }
-      settings.set(prop, gamma);
       std::cout << "chain " << id << " gamma set: " << gamma << std::endl << std::flush;
       updateCalibrationsFromSettings(settings);
     }
@@ -202,8 +203,8 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     ss >> val;
     if (!ss.fail()) 
     {
-      settings.set(&Settings::scene, val);
-      std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl << std::flush;
+      settings.scene = val;
+      std::cout << "scene set: " << settings.scene << std::endl << std::flush;
     }
   }
   else if (cmd == "brightness")
@@ -212,8 +213,8 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     ss >> brightness;
     if (!ss.fail())
     {
-      settings.set(&Settings::brightness, brightness);
-      std::cout << "brightness set: " << settings.get(&Settings::brightness) << std::endl << std::flush;
+      settings.brightness = brightness;
+      std::cout << "brightness set: " << settings.brightness << std::endl << std::flush;
     }
   }
   else if (cmd == "param")
@@ -222,8 +223,8 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     ss >> param;
     if (!ss.fail())
     {
-      settings.set(&Settings::param, param);
-      std::cout << "param set: " << settings.get(&Settings::param) << std::endl << std::flush;
+      settings.param = param;
+      std::cout << "param set: " << settings.param << std::endl << std::flush;
     }
   }
   else if (cmd == "autosave")
@@ -232,20 +233,23 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     ss >> val;
     if (!ss.fail())
     {
-      settings.set(&Settings::autosave, val == 0 ? false : true);
-      std::cout << "autosave set: " << (settings.get(&Settings::autosave) ? 1 : 0) << std::endl << std::flush;
+      settings.autosave = (val == 0 ? false : true);
+      std::cout << "autosave set: " << (settings.autosave ? 1 : 0) << std::endl << std::flush;
     }
   }
   else if (cmd == "defaults")
   {
-    settings.setDefaults(true, 0);
+    settings.setDefaults();
     updateMappingsFromSettings(settings);
     updateCalibrationsFromSettings(settings);
   }
   else if (cmd == "flash")
   {
     // Write the settings to flash
-    settings.writeToFlash(true);
+    if (settings.writeToFlash())
+      std::cout << "Wrote settings to flash!" << std::endl << std::flush;
+    else
+      std::cout << "Skipped writing to flash because contents were already correct." << std::endl << std::flush;
   }
   else if (cmd == "poke")
   {
@@ -312,48 +316,10 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
     std::cout << "pico-led by Donkey Kong" << std::endl;
     std::cout << "https://github.com/DonkeyKong/pico-led" << std::endl;
     std::cout << std::endl;
-    std::cout << "Settings:" << std::endl;
-    std::cout << "    " << "version:    " << settings.get(&Settings::version) << std::endl;
-    std::cout << "    " << "boardId:    " << *((uint64_t*)settings.get(&Settings::boardId).id) << std::endl;
-    std::cout << "    " << "autosave:    " << settings.get(&Settings::autosave) << std::endl;
-    std::cout << "    " << "scene:    " << settings.get(&Settings::scene) << std::endl;
-    std::cout << "    " << "brightness:    " << settings.get(&Settings::brightness) << std::endl;
-    std::cout << "    " << "param:    " << settings.get(&Settings::param) << std::endl;
-
-    std::cout << "    " << "chain0Count:    " << settings.get(&Settings::chain0Count) << std::endl;
-    std::cout << "    " << "chain0Offset:    " << settings.get(&Settings::chain0Offset) << std::endl;
-    std::cout << "    " << "chain0ColorBalance:    " << "( " 
-                      << settings.get(&Settings::chain0ColorBalance).X << " , " 
-                      << settings.get(&Settings::chain0ColorBalance).Y << " , " 
-                      << settings.get(&Settings::chain0ColorBalance).Z << " )" << std::endl;
-    std::cout << "    " << "chain0Gamma:    " << settings.get(&Settings::chain0Gamma) << std::endl;
-
-    std::cout << "    " << "chain1Count:    " << settings.get(&Settings::chain1Count) << std::endl;
-    std::cout << "    " << "chain1Offset:    " << settings.get(&Settings::chain1Offset) << std::endl;
-    std::cout << "    " << "chain1ColorBalance:    " << "( " 
-                      << settings.get(&Settings::chain1ColorBalance).X << " , " 
-                      << settings.get(&Settings::chain1ColorBalance).Y << " , " 
-                      << settings.get(&Settings::chain1ColorBalance).Z << " )" << std::endl;
-    std::cout << "    " << "chain1Gamma:    " << settings.get(&Settings::chain1Gamma) << std::endl;
-
-    std::cout << "    " << "chain2Count:    " << settings.get(&Settings::chain2Count) << std::endl;
-    std::cout << "    " << "chain2Offset:    " << settings.get(&Settings::chain2Offset) << std::endl;
-    std::cout << "    " << "chain2ColorBalance:    " << "( " 
-                      << settings.get(&Settings::chain2ColorBalance).X << " , " 
-                      << settings.get(&Settings::chain2ColorBalance).Y << " , " 
-                      << settings.get(&Settings::chain2ColorBalance).Z << " )" << std::endl;
-    std::cout << "    " << "chain2Gamma:    " << settings.get(&Settings::chain2Gamma) << std::endl;
-
-    std::cout << "    " << "chain3Count:    " << settings.get(&Settings::chain3Count) << std::endl;
-    std::cout << "    " << "chain3Offset:    " << settings.get(&Settings::chain3Offset) << std::endl;
-    std::cout << "    " << "chain3ColorBalance:    " << "( " 
-                      << settings.get(&Settings::chain3ColorBalance).X << " , " 
-                      << settings.get(&Settings::chain3ColorBalance).Y << " , " 
-                      << settings.get(&Settings::chain3ColorBalance).Z << " )" << std::endl;
-    std::cout << "    " << "chain3Gamma:    " << settings.get(&Settings::chain3Gamma) << std::endl;
+    settings.print();
     std::cout << std::endl;
     std::cout << "Runtime Data:" << std::endl;
-    std::cout << "    " << "runtime version:    " << CURRENT_SETTINGS_VERSION << std::endl;
+    std::cout << "    " << "full settings size:    " << sizeof(Settings) << std::endl;
     std::cout << "    " << "status:    " << (halt ? "halted" : "running") << std::endl;
     std::cout << "    " << "scene count:    " << Scenes.size() << std::endl;
     std::cout << "    " << "scene names:";
@@ -394,7 +360,7 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
   {
     // Reboot into programming mode
     std::cout << "ok" << std::endl << std::flush;
-    rebootIntoProgMode(drawBufSize, mappings);
+    rebootIntoProgMode(drawBuffer.size(), mappings);
   }
   else
   {
@@ -412,7 +378,7 @@ void processCommand(std::string cmdAndArgs, SettingsManager& settings)
   }
 }
 
-void processStdIo(SettingsManager& settings)
+void processStdIo(Settings& settings)
 {
   static char inBuf[1024];
   static int pos = 0;
@@ -445,8 +411,8 @@ int main()
   stdio_init_all();
 
   // Init the settings object
-  SettingsManager settings;
-  settings.validate(&Settings::scene, 0, (int)Scenes.size()-1, 0);
+  SettingsManager settingsMgr(Scenes.size());
+  Settings& settings = settingsMgr.getSettings();
 
   // Load and start the PIO program
   GPIOButton flashButton(16);
@@ -461,7 +427,7 @@ int main()
   
   updateCalibrationsFromSettings(settings);
   updateMappingsFromSettings(settings);
-
+  
   while (1)
   {
     // Wait
@@ -474,76 +440,82 @@ int main()
     sceneButton.update();
     if (sceneButton.buttonUp())
     {
-      settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)Scenes.size());
-      std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl << std::flush;
+      settings.scene = (settings.scene + 1) % (int)Scenes.size();
+      std::cout << "scene set: " << settings.scene << std::endl << std::flush;
     }
 
     paramButton.update();
     if (paramButton.heldActivate())
     {
-      float param = settings.get(&Settings::param) + (0.2f * TargetFrameTimeSec);
+      float param = settings.param + (0.2f * TargetFrameTimeSec);
       if (param > 1.0f ) param = 0.0f;
-      settings.set(&Settings::param, param);
+      settings.param = param;
     }
     if (paramButton.buttonUp())
     {
-      float param = roundToInterval(settings.get(&Settings::param) + 0.1f, 0.1f);
+      float param = roundToInterval(settings.param + 0.1f, 0.1f);
       if (param > 1.0f ) param = 0.0f;
-      settings.set(&Settings::param, param);
-      std::cout << "param set: " << settings.get(&Settings::param) << std::endl << std::flush;
+      settings.param = param;
+      std::cout << "param set: " << settings.param << std::endl << std::flush;
     }
 
     brightnessButton.update();
     if (brightnessButton.heldActivate())
     {
-      float brightness = settings.get(&Settings::brightness) - (0.2f * TargetFrameTimeSec);
+      float brightness = settings.brightness - (0.2f * TargetFrameTimeSec);
       if (brightness < 0.0f ) brightness = 1.0f;
-      settings.set(&Settings::brightness, brightness);
+      settings.brightness = brightness;
     }
     if (brightnessButton.buttonUp())
     {
-      float brightness = roundToInterval(settings.get(&Settings::brightness) - 0.1f, 0.1f);
+      float brightness = roundToInterval(settings.brightness - 0.1f, 0.1f);
       if (brightness < 0.0f ) brightness = 1.0f;
-      settings.set(&Settings::brightness, brightness);
-      std::cout << "brightness set: " << settings.get(&Settings::brightness) << std::endl << std::flush;
+      settings.brightness = brightness;
+      std::cout << "brightness set: " << settings.brightness << std::endl << std::flush;
     }
 
     sceneBrightnessButton.update();
     if (sceneBrightnessButton.heldActivate())
     {
-      float brightness = settings.get(&Settings::brightness) - (0.2f * TargetFrameTimeSec);
+      float brightness = settings.brightness - (0.2f * TargetFrameTimeSec);
       if (brightness < 0 ) brightness = 1.0f;
-      settings.set(&Settings::brightness, brightness);
+      settings.brightness = brightness;
     }
     if (sceneBrightnessButton.buttonUp())
     {
-      settings.set(&Settings::scene, (settings.get(&Settings::scene) + 1) % (int)Scenes.size());
-      std::cout << "scene set: " << settings.get(&Settings::scene) << std::endl << std::flush;
+      settings.scene = (settings.scene + 1) % (int)Scenes.size();
+      std::cout << "scene set: " << settings.scene << std::endl << std::flush;
     }
 
     flashButton.update();
     if (flashButton.buttonUp())
     {
-      settings.writeToFlash(true);
+      if (settings.writeToFlash())
+        std::cout << "Wrote settings to flash!" << std::endl << std::flush;
+      else
+        std::cout << "Skipped writing to flash because contents were already correct." << std::endl << std::flush;
     }
     
     bootSelButton.update();
     if (bootSelButton.pressed())
     {
-      rebootIntoProgMode(drawBufSize, mappings);
+      rebootIntoProgMode(drawBuffer.size(), mappings);
     }
 
     // If configured to autosave, try to write settings to flash
     // every frame. It'll only actually do it if the flash payload
     // has changed and even then only once every 15 seconds.
-    if (settings.get(&Settings::autosave))
+    if (settings.autosave)
     {
-      settings.writeToFlash();
+      if (settingsMgr.autosave())
+      {
+        std::cout << "autosaved settings to flash!" << std::endl << std::flush;
+      }
     }
 
     // Update and draw
-    if (!halt) Scenes[settings.get(&Settings::scene)]->update(drawBuffer, TargetFrameTimeSec, settings.get(&Settings::param));
-    Ws2812bOutput::writeColorsParallel(drawBuffer, mappings, settings.get(&Settings::brightness));
+    if (!halt) Scenes[settings.scene]->update(drawBuffer, TargetFrameTimeSec, settings.param);
+    Ws2812bOutput::writeColorsParallel(drawBuffer, mappings, settings.brightness);
   }
   return 0;
 }

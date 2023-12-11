@@ -135,6 +135,21 @@ struct LabColor
 };
 #pragma pack(pop)
 
+static_assert(std::is_standard_layout<Vec3f>::value, "Vec3f must have standard layout.");
+static_assert(std::is_trivially_copyable<Vec3f>::value, "Vec3f must be trivially copyable.");
+
+static_assert(std::is_standard_layout<HSVColor>::value, "HSVColor must have standard layout.");
+static_assert(std::is_trivially_copyable<HSVColor>::value, "HSVColor must be trivially copyable.");
+
+static_assert(std::is_standard_layout<RGBColor>::value, "RGBColor must have standard layout.");
+static_assert(std::is_trivially_copyable<RGBColor>::value, "RGBColor must be trivially copyable.");
+
+static_assert(std::is_standard_layout<XYZColor>::value, "XYZColor must have standard layout.");
+static_assert(std::is_trivially_copyable<XYZColor>::value, "XYZColor must be trivially copyable.");
+
+static_assert(std::is_standard_layout<LabColor>::value, "LabColor must have standard layout.");
+static_assert(std::is_trivially_copyable<LabColor>::value, "LabColor must be trivially copyable.");
+
 // Get an RGBColor corresponding to a color teperature in kelvin.
 // Works for all float values but returns colors are clamped 
 // between 1000k and 12000k
