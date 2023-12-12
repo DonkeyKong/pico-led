@@ -54,8 +54,13 @@ class GamerRGB : public Scene
 public:
   virtual void update(LEDBuffer& buffer, float deltaTime, float param) override
   {
-    t = fmodf(t + deltaTime, 10.0f);
-    float baseHue = t * 36.0f;
+    float tMax = param * 19.0f + 1.0f;
+    t = fmodf(t + deltaTime, tMax);
+    if (isnanf(t))
+    {
+      t = 0;
+    }
+    float baseHue = t * (360.0f / tMax);
     for (int i = 0; i < buffer.size(); ++i)
     {
       float locationOffsetHue = (float)i * (360.0f / (float)buffer.size());
