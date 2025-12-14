@@ -7,7 +7,7 @@ set(PICO_BOARD "pico")
 
 # Pull in SDK (must be before project)
 include(pico_sdk_import.cmake)
-#include(pico_extras_import_optional.cmake)
+include(pico_extras_import_optional.cmake)
 
 set(PROJECT_NAME "pico-led")
 
