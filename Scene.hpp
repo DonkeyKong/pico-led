@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Color.hpp"
+#include <cpp/Color.hpp>
 #include <map>
 #include <cmath>
 #include <cstdlib>

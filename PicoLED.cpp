@@ -1,13 +1,14 @@
-#include "PioProgram.hpp"
-#include "Button.hpp"
-#include "Color.hpp"
+#include <cpp/LedStripWs2812b.hpp>
+#include <cpp/BootSelButton.hpp>
+#include <cpp/Button.hpp>
+#include <cpp/Color.hpp>
+#include <cpp/FlashStorage.hpp>
 #include "Scene.hpp"
 #include "Settings.hpp"
 
 #include <pico/stdlib.h>
 #include <pico/stdio.h>
 #include <pico/bootrom.h>
-#include <pico/multicore.h>
 #include <pico/unique_id.h>
 #include <hardware/watchdog.h>
 
@@ -21,12 +22,12 @@ constexpr uint64_t TargetFrameTimeUs = 1000000 / TargetFPS;
 constexpr float TargetFrameTimeSec = 1.0f / (float)TargetFPS;
 
 LEDBuffer drawBuffer;
-Ws2812bOutput chain0 = Ws2812bOutput::create(22);
-Ws2812bOutput chain1 = Ws2812bOutput::create(26);
-Ws2812bOutput chain2 = Ws2812bOutput::create(27);
-Ws2812bOutput chain3 = Ws2812bOutput::create(28);
+LedStripWs2812b chain0(22);
+LedStripWs2812b chain1(26);
+LedStripWs2812b chain2(27);
+LedStripWs2812b chain3(28);
 
-std::vector<Ws2812bOutput::BufferMapping> mappings { {&chain0}, {&chain1}, {&chain2}, {&chain3} };
+std::vector<LedStripWs2812b::BufferMapping> mappings { {&chain0}, {&chain1}, {&chain2}, {&chain3} };
 bool halt = false;
 
 inline float roundToInterval(float val, float interval)
@@ -68,7 +69,7 @@ void updateMappingsFromSettings(const Settings& settings)
   drawBuffer.resize(drawBufSize);
 }
 
-void rebootIntoProgMode(uint32_t displayBufferSize, std::vector<Ws2812bOutput::BufferMapping>& mappings)
+void rebootIntoProgMode(uint32_t displayBufferSize, std::vector<LedStripWs2812b::BufferMapping>& mappings)
 {
   // Flash thru a rainbow to indicate programming mode
   LEDBuffer red(displayBufferSize);
@@ -79,28 +80,28 @@ void rebootIntoProgMode(uint32_t displayBufferSize, std::vector<Ws2812bOutput::B
   }
 
   // Flash red 3x
-  Ws2812bOutput::writeColorsParallel(black, mappings, 0.5f);
+  LedStripWs2812b::writeColorsParallel(black, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(200));
-  Ws2812bOutput::writeColorsParallel(red, mappings, 0.5f);
+  LedStripWs2812b::writeColorsParallel(red, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(100));
-  Ws2812bOutput::writeColorsParallel(black, mappings, 0.5f);
+  LedStripWs2812b::writeColorsParallel(black, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(200));
-  Ws2812bOutput::writeColorsParallel(red, mappings, 0.5f);
+  LedStripWs2812b::writeColorsParallel(red, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(100));
-  Ws2812bOutput::writeColorsParallel(black, mappings, 0.5f);
+  LedStripWs2812b::writeColorsParallel(black, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(200));
-  Ws2812bOutput::writeColorsParallel(red, mappings, 0.5f);
+  LedStripWs2812b::writeColorsParallel(red, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(100));
-  Ws2812bOutput::writeColorsParallel(black, mappings, 0.5f);
+  LedStripWs2812b::writeColorsParallel(black, mappings, 0.5f);
   sleep_until(make_timeout_time_ms(200));
 
   // Reboot
-  multicore_reset_core1();
   reset_usb_boot(0,0);
 }
 
-void processCommand(std::string cmdAndArgs, Settings& settings)
+void processCommand(std::string cmdAndArgs, FlashStorage<Settings>& settingsMgr)
 {
+  Settings& settings = settingsMgr.data;
   std::stringstream ss(cmdAndArgs);
   std::string cmd;
   ss >> cmd;
@@ -246,7 +247,7 @@ void processCommand(std::string cmdAndArgs, Settings& settings)
   else if (cmd == "flash")
   {
     // Write the settings to flash
-    if (settings.writeToFlash())
+    if (settingsMgr.writeToFlash())
       std::cout << "Wrote settings to flash!" << std::endl << std::flush;
     else
       std::cout << "Skipped writing to flash because contents were already correct." << std::endl << std::flush;
@@ -378,8 +379,9 @@ void processCommand(std::string cmdAndArgs, Settings& settings)
   }
 }
 
-void processStdIo(Settings& settings)
+void processStdIo(FlashStorage<Settings>& settingsMgr)
 {
+  Settings& settings = settingsMgr.data;
   static char inBuf[1024];
   static int pos = 0;
 
@@ -395,7 +397,7 @@ void processStdIo(Settings& settings)
     {
       inBuf[pos] = '\0';
       std::cout << std::endl << std::flush; // echo to client
-      processCommand(inBuf, settings);
+      processCommand(inBuf, settingsMgr);
       pos = 0;
     }
     else
@@ -411,8 +413,8 @@ int main()
   stdio_init_all();
 
   // Init the settings object
-  SettingsManager settingsMgr(Scenes.size());
-  Settings& settings = settingsMgr.getSettings();
+  FlashStorage<Settings> settingsMgr;
+  Settings& settings = settingsMgr.data;
 
   // Load and start the PIO program
   GPIOButton flashButton(16);
@@ -435,7 +437,7 @@ int main()
     nextFrameTime = make_timeout_time_us(TargetFrameTimeUs);
 
     // Process input
-    processStdIo(settings);
+    processStdIo(settingsMgr);
 
     sceneButton.update();
     if (sceneButton.buttonUp())
@@ -490,7 +492,7 @@ int main()
     flashButton.update();
     if (flashButton.buttonUp())
     {
-      if (settings.writeToFlash())
+      if (settingsMgr.writeToFlash())
         std::cout << "Wrote settings to flash!" << std::endl << std::flush;
       else
         std::cout << "Skipped writing to flash because contents were already correct." << std::endl << std::flush;
@@ -505,17 +507,17 @@ int main()
     // If configured to autosave, try to write settings to flash
     // every frame. It'll only actually do it if the flash payload
     // has changed and even then only once every 15 seconds.
-    if (settings.autosave)
-    {
-      if (settingsMgr.autosave())
-      {
-        std::cout << "autosaved settings to flash!" << std::endl << std::flush;
-      }
-    }
+    // if (settings.autosave)
+    // {
+    //   if (settingsMgr.autosave())
+    //   {
+    //     std::cout << "autosaved settings to flash!" << std::endl << std::flush;
+    //   }
+    // }
 
     // Update and draw
     if (!halt) Scenes[settings.scene]->update(drawBuffer, TargetFrameTimeSec, settings.param);
-    Ws2812bOutput::writeColorsParallel(drawBuffer, mappings, settings.brightness);
+    LedStripWs2812b::writeColorsParallel(drawBuffer, mappings, settings.brightness);
   }
   return 0;
 }

@@ -1,3 +1,3 @@
-[submodule "deps/baselib"]
-	path = deps/baselib
-	url = https://github.com/srned/baselib.git
+[submodule "deps/pi-pico-cpp"]
+	path = deps/pi-pico-cpp
+	url = https://github.com/DonkeyKong/pi-pico-cpp.git

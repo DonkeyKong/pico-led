@@ -1,23 +1,33 @@
 #pragma once
 
+#include <cpp/Color.hpp>
+
 #include "hardware/flash.h"
 #include <pico/stdlib.h>
 #include <pico/unique_id.h>
 #include <hardware/sync.h>
+
 #include <vector>
 #include <type_traits>
 #include <cstring>
 #include <stdio.h>
-#include "Color.hpp"
 
 #define MAX_BUFFER_LENGTH 10000
+
+template <typename T>
+bool validate(T& field, T min, T max, T defaultVal)
+{
+  if (field < min || field > max)
+  {
+    field = defaultVal;
+    return true;
+  }
+  return false;
+}
 
 struct Settings
 {
 public:
-  uint64_t crc;   // The crc of the settings object
-  size_t size = sizeof(Settings);  // The size of the whole settings object
-  pico_unique_board_id_t boardId;
   bool autosave;
   int scene;
   float brightness;
@@ -40,40 +50,88 @@ public:
   float chain3Gamma;
 
   // Set all settings to their default values
-  void setDefaults();
+  void setDefaults()
+  {
+    autosave = false;
+    scene = 0;
+    brightness = 1.0f;
+    param = 0.0f;
+    chain0Count = 1ul;
+    chain1Count = 0ul;
+    chain2Count = 0ul;
+    chain3Count = 0ul;
+    chain0Offset = 0;
+    chain1Offset = 0;
+    chain2Offset = 0;
+    chain3Offset = 0;
+    chain0ColorBalance = {1.0f, 1.0f, 1.0f};
+    chain1ColorBalance = {1.0f, 1.0f, 1.0f};
+    chain2ColorBalance = {1.0f, 1.0f, 1.0f};
+    chain3ColorBalance = {1.0f, 1.0f, 1.0f};
+    chain0Gamma = 1.0f;
+    chain1Gamma = 1.0f;
+    chain2Gamma = 1.0f;
+    chain3Gamma = 1.0f;
+  }
 
   // Returns true if all settings are ok, false if any had to be changed 
-  bool validateAll(int numScenes);
-
-  // Write the settings object to the last two flash sectors.
-  // Updates the size, board ID, and crc as a side effect.
-  // Writing it twice ensures there is always one valid copy
-  // in the event of power failure during write.
-  // Returns false if flash contents is already correct
-  bool writeToFlash();
-
-  // Read the settings from flash memory. Returns false
-  // if none of the flash sectors with settings were valid
-  bool readFromFlash();
+  bool validateAll(int numScenes)
+  {
+    // Validate some settings to stop the system from crashing by trying to allocate too much memory
+    bool failedValidation = false;
+    failedValidation |= validate(scene, 0, numScenes-1, 0);
+    failedValidation |= validate(brightness, 0.0f, 1.0f, 1.0f);
+    failedValidation |= validate(param, 0.0f, 1.0f, 0.0f);
+    failedValidation |= validate(chain0Count, 0ul, (uint32_t)MAX_BUFFER_LENGTH, 1ul);
+    failedValidation |= validate(chain1Count, 0ul, (uint32_t)MAX_BUFFER_LENGTH, 0ul);
+    failedValidation |= validate(chain2Count, 0ul, (uint32_t)MAX_BUFFER_LENGTH, 0ul);
+    failedValidation |= validate(chain3Count, 0ul, (uint32_t)MAX_BUFFER_LENGTH, 0ul);
+    failedValidation |= validate(chain0Offset, 0, MAX_BUFFER_LENGTH-(int)chain0Count, 0);
+    failedValidation |= validate(chain1Offset, 0, MAX_BUFFER_LENGTH-(int)chain1Count, 0);
+    failedValidation |= validate(chain2Offset, 0, MAX_BUFFER_LENGTH-(int)chain2Count, 0);
+    failedValidation |= validate(chain3Offset, 0, MAX_BUFFER_LENGTH-(int)chain3Count, 0);
+    return !failedValidation;
+  }
 
   // Print all the settings to cout
-  void print();
-private:
-  // Return true if the flash is actually written
-  bool writeToFlashInternal(int sectorOffset);
-  size_t structSize() const;
-  uint64_t calculateCrc() const;
-};
+  void print()
+  {
+    std::cout << "Settings:" << std::endl;
+    std::cout << "    " << "autosave:    " << autosave << std::endl;
+    std::cout << "    " << "scene:    " << scene << std::endl;
+    std::cout << "    " << "brightness:    " << brightness << std::endl;
+    std::cout << "    " << "param:    " << param << std::endl;
 
-class SettingsManager
-{
-private:
-  static const uint32_t Minimum_Write_Interval_Ms = 15000;
-  absolute_time_t nextWriteTime;
-  Settings settings;
+    std::cout << "    " << "chain0Count:    " << chain0Count << std::endl;
+    std::cout << "    " << "chain0Offset:    " << chain0Offset << std::endl;
+    std::cout << "    " << "chain0ColorBalance:    " << "( " 
+                      << chain0ColorBalance.X << " , " 
+                      << chain0ColorBalance.Y << " , " 
+                      << chain0ColorBalance.Z << " )" << std::endl;
+    std::cout << "    " << "chain0Gamma:    " << chain0Gamma << std::endl;
 
-public:
-  SettingsManager(int numScenes);
-  Settings& getSettings();
-  bool autosave();
+    std::cout << "    " << "chain1Count:    " << chain1Count << std::endl;
+    std::cout << "    " << "chain1Offset:    " << chain1Offset << std::endl;
+    std::cout << "    " << "chain1ColorBalance:    " << "( " 
+                      << chain1ColorBalance.X << " , " 
+                      << chain1ColorBalance.Y << " , " 
+                      << chain1ColorBalance.Z << " )" << std::endl;
+    std::cout << "    " << "chain1Gamma:    " << chain1Gamma << std::endl;
+
+    std::cout << "    " << "chain2Count:    " << chain2Count << std::endl;
+    std::cout << "    " << "chain2Offset:    " << chain2Offset << std::endl;
+    std::cout << "    " << "chain2ColorBalance:    " << "( " 
+                      << chain2ColorBalance.X << " , " 
+                      << chain2ColorBalance.Y << " , " 
+                      << chain2ColorBalance.Z << " )" << std::endl;
+    std::cout << "    " << "chain2Gamma:    " << chain2Gamma << std::endl;
+
+    std::cout << "    " << "chain3Count:    " << chain3Count << std::endl;
+    std::cout << "    " << "chain3Offset:    " << chain3Offset << std::endl;
+    std::cout << "    " << "chain3ColorBalance:    " << "( " 
+                      << chain3ColorBalance.X << " , " 
+                      << chain3ColorBalance.Y << " , " 
+                      << chain3ColorBalance.Z << " )" << std::endl;
+    std::cout << "    " << "chain3Gamma:    " << chain3Gamma << std::endl << std::flush;
+  }
 };

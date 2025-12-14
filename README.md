@@ -24,11 +24,11 @@ the board with a simple text-based serial interface over USB.
 ## GPIO Mapping 
 
 GPIO Mode | Pin | Name | Description
--------|----------|-------------
+----|---|----------|-------------
 Out | 22 | LED 0 | Strip 0 Data
 Out | 26 | LED 1 | Strip 1 Data
 Out | 27 | LED 2 | Strip 2 Data
-Out | 28 | LED 3| Strip 3 Data
+Out | 28 | LED 3 | Strip 3 Data
 In  | 16 | Save | Write settings to flash
 In  | 17 | Control | Adjust mode parameter (tap = +10%, hold = +20% / sec)
 In  | 18 | Combo | Change mode (tap), Adjust brightness (hold)
