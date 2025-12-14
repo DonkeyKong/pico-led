@@ -24,7 +24,7 @@ the board with a simple text-based serial interface over USB.
 ## GPIO Mapping 
 
 GPIO Mode | Pin | Name | Description
-----|---|----------|-------------
+----------|-----|------|-------------
 Out | 22 | LED 0 | Strip 0 Data
 Out | 26 | LED 1 | Strip 1 Data
 Out | 27 | LED 2 | Strip 2 Data
@@ -94,7 +94,7 @@ Change maximum brightness
 `brightness` is a floating point value between 0.0 and 1.0. Default is 1.0, full brightness.
 
 ### `param [param]`
-Change mode parameter brightness
+Change mode parameter
 
 `param` is a floating point value between 0.0 and 1.0. Default is 0.0. What the mode parameter changes varies by mode. It could change the color temperature of a white light, the color of a solid color light, the speed of an animation, etc.
 

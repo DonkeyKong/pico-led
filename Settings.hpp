@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cpp/Color.hpp>
+#include <cpp/LedStripWs2812b.hpp>
+#include "Scene.hpp"
 
 #include "hardware/flash.h"
 #include <pico/stdlib.h>
@@ -75,11 +77,11 @@ public:
   }
 
   // Returns true if all settings are ok, false if any had to be changed 
-  bool validateAll(int numScenes)
+  bool validateAll()
   {
     // Validate some settings to stop the system from crashing by trying to allocate too much memory
     bool failedValidation = false;
-    failedValidation |= validate(scene, 0, numScenes-1, 0);
+    failedValidation |= validate(scene, 0, (int)Scenes.size()-1, 0);
     failedValidation |= validate(brightness, 0.0f, 1.0f, 1.0f);
     failedValidation |= validate(param, 0.0f, 1.0f, 0.0f);
     failedValidation |= validate(chain0Count, 0ul, (uint32_t)MAX_BUFFER_LENGTH, 1ul);
@@ -134,4 +136,39 @@ public:
                       << chain3ColorBalance.Z << " )" << std::endl;
     std::cout << "    " << "chain3Gamma:    " << chain3Gamma << std::endl << std::flush;
   }
+
+  void updateCalibrations(LedStripWs2812b& chain0, LedStripWs2812b& chain1, LedStripWs2812b& chain2, LedStripWs2812b& chain3)
+  {
+    chain0.colorBalance(chain0ColorBalance);
+    chain1.colorBalance(chain1ColorBalance);
+    chain2.colorBalance(chain2ColorBalance);
+    chain3.colorBalance(chain3ColorBalance);
+    chain0.gamma(chain0Gamma);
+    chain1.gamma(chain1Gamma);
+    chain2.gamma(chain2Gamma);
+    chain3.gamma(chain3Gamma);
+  }
+
+  void updateMappings(std::vector<LedStripWs2812b::BufferMapping>& mappings, LEDBuffer& drawBuffer)
+  {
+    // Refresh the scene mappings
+    mappings[0].size = (int)chain0Count;
+    mappings[1].size = (int)chain1Count;
+    mappings[2].size = (int)chain2Count;
+    mappings[3].size = (int)chain3Count;
+    mappings[0].offset = (int)chain0Offset;
+    mappings[1].offset = (int)chain1Offset;
+    mappings[2].offset = (int)chain2Offset;
+    mappings[3].offset = (int)chain3Offset;
+
+    int drawBufSize = 0;
+    drawBufSize = std::max(drawBufSize, (int)chain0Count + chain0Offset);
+    drawBufSize = std::max(drawBufSize, (int)chain1Count + chain1Offset);
+    drawBufSize = std::max(drawBufSize, (int)chain2Count + chain2Offset);
+    drawBufSize = std::max(drawBufSize, (int)chain3Count + chain3Offset);
+    drawBufSize = std::min(drawBufSize, MAX_BUFFER_LENGTH);
+
+    drawBuffer.resize(drawBufSize);
+  }
+
 };

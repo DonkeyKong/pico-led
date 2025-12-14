@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cpp/Color.hpp>
+#include <cpp/LedStripWs2812b.hpp>
 #include <map>
 #include <cmath>
 #include <cstdlib>
