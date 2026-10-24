@@ -33,7 +33,7 @@ public:
   bool autosave;
   int scene;
   float brightness;
-  float param;
+  float reserved; // not used
   uint32_t chain0Count;
   uint32_t chain1Count;
   uint32_t chain2Count;
@@ -50,6 +50,7 @@ public:
   float chain1Gamma;
   float chain2Gamma;
   float chain3Gamma;
+  float param[16];
 
   // Set all settings to their default values
   void setDefaults()
@@ -57,7 +58,7 @@ public:
     autosave = false;
     scene = 0;
     brightness = 1.0f;
-    param = 0.0f;
+    reserved = 0.0f;
     chain0Count = 1ul;
     chain1Count = 0ul;
     chain2Count = 0ul;
@@ -74,6 +75,7 @@ public:
     chain1Gamma = 1.0f;
     chain2Gamma = 1.0f;
     chain3Gamma = 1.0f;
+    std::fill(param, param+std::size(param), 0.0f);
   }
 
   // Returns true if all settings are ok, false if any had to be changed 
@@ -83,7 +85,7 @@ public:
     bool failedValidation = false;
     failedValidation |= validate(scene, 0, (int)Scenes.size()-1, 0);
     failedValidation |= validate(brightness, 0.0f, 1.0f, 1.0f);
-    failedValidation |= validate(param, 0.0f, 1.0f, 0.0f);
+    //failedValidation |= validate(reserved, 0.0f, 1.0f, 0.0f);
     failedValidation |= validate(chain0Count, 0ul, (uint32_t)MAX_BUFFER_LENGTH, 1ul);
     failedValidation |= validate(chain1Count, 0ul, (uint32_t)MAX_BUFFER_LENGTH, 0ul);
     failedValidation |= validate(chain2Count, 0ul, (uint32_t)MAX_BUFFER_LENGTH, 0ul);
@@ -92,6 +94,11 @@ public:
     failedValidation |= validate(chain1Offset, 0, MAX_BUFFER_LENGTH-(int)chain1Count, 0);
     failedValidation |= validate(chain2Offset, 0, MAX_BUFFER_LENGTH-(int)chain2Count, 0);
     failedValidation |= validate(chain3Offset, 0, MAX_BUFFER_LENGTH-(int)chain3Count, 0);
+    for (int i = 0; i < std::size(param); ++i)
+    {
+      failedValidation |= validate(param[i], 0.0f, 1.0f, 0.0f);
+    }
+
     return !failedValidation;
   }
 
@@ -102,7 +109,7 @@ public:
     std::cout << "    " << "autosave:    " << autosave << std::endl;
     std::cout << "    " << "scene:    " << scene << std::endl;
     std::cout << "    " << "brightness:    " << brightness << std::endl;
-    std::cout << "    " << "param:    " << param << std::endl;
+    //std::cout << "    " << "reserved:    " << reserved << std::endl;
 
     std::cout << "    " << "chain0Count:    " << chain0Count << std::endl;
     std::cout << "    " << "chain0Offset:    " << chain0Offset << std::endl;
@@ -135,6 +142,39 @@ public:
                       << chain3ColorBalance.Y << " , " 
                       << chain3ColorBalance.Z << " )" << std::endl;
     std::cout << "    " << "chain3Gamma:    " << chain3Gamma << std::endl << std::flush;
+
+    for (int i = 0; i < std::size(param); ++i)
+    {
+      std::cout << "    " << "param[" << i << "]:    " << param[i] << std::endl;
+    }
+  }
+
+  float getParam(int i)
+  {
+    if (i < 0 || i >= std::size(param))
+    {
+      return 0;
+    }
+    return param[i];
+  }
+
+  void setParam(int i, float val)
+  {
+    if (i < 0 || i >= std::size(param))
+    {
+      return;
+    }
+    param[i] = val;
+  }
+
+  float getCurrentParam()
+  {
+    return getParam(scene);
+  }
+
+  void setCurrentParam(float val)
+  {
+    setParam(scene, val);
   }
 
   void updateCalibrations(LedStripWs2812b& chain0, LedStripWs2812b& chain1, LedStripWs2812b& chain2, LedStripWs2812b& chain3)
@@ -149,7 +189,12 @@ public:
     chain3.gamma(chain3Gamma);
   }
 
-  void updateMappings(std::vector<LedStripWs2812b::BufferMapping>& mappings, LEDBuffer& drawBuffer)
+  void updateMappings(
+    std::vector<LedStripWs2812b::BufferMapping>& mappings, 
+    LEDBuffer& drawBuffer, 
+    std::vector<Vec3f>& spatialLut, 
+    std::function<Vec3f(int)> indexToPosition
+  )
   {
     // Refresh the scene mappings
     mappings[0].size = (int)chain0Count;
@@ -169,6 +214,11 @@ public:
     drawBufSize = std::min(drawBufSize, MAX_BUFFER_LENGTH);
 
     drawBuffer.resize(drawBufSize);
+    spatialLut.resize(drawBufSize);
+    for (int i = 0; i < drawBufSize; ++i)
+    {
+      spatialLut[i] = indexToPosition(i);
+    }
   }
 
 };

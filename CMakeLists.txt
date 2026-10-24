@@ -16,7 +16,7 @@ cmake_minimum_required(VERSION 3.18)
 set(PROJECT_NAME "pico-led")
 
 # Choose between "pico" and "picow" for your target board
-set(PICO_BOARD "pico_w")
+set(PICO_BOARD "pico")
 
 # We assume the pico-sdk is located at /pico-sdk because
 # this is where we mount it in the docker
@@ -66,6 +66,7 @@ target_link_libraries(${PROJECT_NAME}
         hardware_flash
         pico_sync
         hardware_pio
+        hardware_adc
 )
 
 # Configure USB for stdio (disables uart)
